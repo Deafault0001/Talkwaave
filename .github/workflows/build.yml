@@ -1,0 +1,45 @@
+name: Build TalkWave IPA
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: macos-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Select Xcode
+        run: sudo xcode-select -s /Applications/Xcode.app
+
+      - name: Build app (unsigned)
+        run: |
+          xcodebuild \
+            -project TalkWave.xcodeproj \
+            -scheme TalkWave \
+            -configuration Release \
+            -sdk iphoneos \
+            -derivedDataPath DerivedData \
+            CODE_SIGN_IDENTITY="" \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGNING_ALLOWED=NO \
+            TARGETED_DEVICE_FAMILY=2 \
+            clean build
+
+      - name: Package IPA
+        run: |
+          mkdir -p Payload
+          cp -r DerivedData/Build/Products/Release-iphoneos/TalkWave.app Payload/
+          zip -r TalkWave.ipa Payload
+          rm -rf Payload
+
+      - name: Upload IPA artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: TalkWave-IPA
+          path: TalkWave.ipa
+          retention-days: 30
